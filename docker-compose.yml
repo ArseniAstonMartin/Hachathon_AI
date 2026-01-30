@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: auth_db
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${AM__DB_USER}
+      POSTGRES_PASSWORD: ${AM__DB_PASSWORD}
+      POSTGRES_DB: ${AM__DB_NAME}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AM__DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: auth_redis
+    restart: always
+    command: redis-server --requirepass ${AM__REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${AM__REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth_app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/fastapi_auth_service
+      - ./private.pem:/fastapi_auth_service/private.pem
+      - ./public.pem:/fastapi_auth_service/public.pem
+    command: >
+      sh -c "alembic upgrade head && 
+             python -m uvicorn src.auth_manager.main:app --host 0.0.0.0 --port 8000 --reload"
+volumes:
+  postgres_data:

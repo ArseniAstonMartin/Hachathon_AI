@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "fastapi-auth-service"
+version = "0.0.0"  # Placeholder - actual version will be determined from git tags
+description = ""
+packages = [
+    { include = "src" }
+]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = {extras = ["all"], version = "^0.116.1"}
+sqlalchemy = "^2.0.43"
+dependency-injector = "^4.48.1"
+colorlog = "^6.9.0"
+asyncpg = "^0.30.0"
+alembic = "^1.16.4"
+psycopg2-binary = "^2.9.10"
+bcrypt = "4.0.1"
+python-jose = {extras = ["cryptography"], version = "^3.5.0"}
+uvicorn = "^0.35.0"
+redis = "^6.4.0"
+pytest = "^8.4.2"
+pytest-asyncio = "0.26"
+setuptools = "^80.10.2"
+
+
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[dependency-groups]
+dev = [
+    "dirty-equals (>=0.11,<0.12)"
+]
