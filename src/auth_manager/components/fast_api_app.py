@@ -1,8 +1,8 @@
 from dependency_injector.wiring import Provide
-from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
-from fastapi import Request, HTTPException, FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.auth_manager.components.database.redis.async_redis import AsyncRedisClient
 from src.auth_manager.components.database.relation.async_database import AsyncDatabaseRelational
@@ -10,7 +10,7 @@ from src.auth_manager.components.injectable import injectable
 from src.auth_manager.components.mixins.logger import LoggerMixin
 from src.auth_manager.config import Settings
 from src.auth_manager.routers.base import BaseRouter
-from fastapi.middleware.cors import CORSMiddleware
+
 
 @injectable()
 class FastApiApp(LoggerMixin):
@@ -20,7 +20,7 @@ class FastApiApp(LoggerMixin):
         redis: AsyncRedisClient,
         settings: Settings,
         routers: list[BaseRouter] = Provide["routers"],
-        middlewares: list[BaseHTTPMiddleware] = Provide["middlewares"]
+        middlewares: list[BaseHTTPMiddleware] = Provide["middlewares"],
     ):
         self._db = db
         self._redis = redis
@@ -28,6 +28,7 @@ class FastApiApp(LoggerMixin):
 
         self.__include_routers(routers)
         self.__add_middlewares(middlewares)
+        self.__add_exception_handlers()
         self._app.add_middleware(
             CORSMiddleware,
             allow_origins=["*"],
@@ -51,11 +52,14 @@ class FastApiApp(LoggerMixin):
     def __add_exception_handlers(self):
         @self._app.exception_handler(HTTPException)
         async def http_exception_handler(request: Request, exc: HTTPException):
-            return JSONResponse({
-                "payload": {},
-                "meta": {
-                    "status": "ERROR",
-                    "code": f"{exc.status_code}",
-                    "messages": [{"name": "Error", "content": exc.detail}]
-                }
-            }, exc.status_code)
+            return JSONResponse(
+                {
+                    "payload": {},
+                    "meta": {
+                        "status": "ERROR",
+                        "code": f"{exc.status_code}",
+                        "messages": [{"name": "Error", "content": exc.detail}],
+                    },
+                },
+                exc.status_code,
+            )

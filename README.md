@@ -22,32 +22,37 @@
 ##  Локальная установка
 
 ### 1. Создать файл .env в корне проекта
-Скопируйте содержимое из примера и настройте параметры под себя:
+Скопируйте содержимое из примера и заполните обязательные переменные окружения для PostgreSQL, Redis, Telegram Bot, OpenAI и object storage:
 
 ```sh
 cat .env.example > .env
 ```
 
-### 2. Сгенерировать приватный ключ
+### 2. Заполнить секреты окружения
+В `.env.example` используются только плейсхолдеры. Для локального запуска не требуется хранить захардкоженные секреты в коде или коммитить реальные токены в репозиторий.
+
+### 3. Сгенерировать приватный ключ
 Создайте приватный ключ для подписи JWT-токенов (алгоритм RS256):
 
 ```sh
 openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
 ```
 
-### 3. Сгенерировать публичный ключ
+### 4. Сгенерировать публичный ключ
 Извлеките публичный ключ из созданного приватного для проверки подлинности токенов:
 
 ```sh
 openssl rsa -in private.pem -pubout -out public.pem
 ```
 
-### 4. Запустить проект через Docker
-Автоматическая сборка и запуск приложения (FastAPI), базы данных (PostgreSQL) и кэша (Redis):
+### 5. Запустить проект через Docker
+Автоматическая сборка и запуск приложения (FastAPI), базы данных (PostgreSQL), Redis и локального S3-compatible storage (MinIO):
 
 ```sh
 docker-compose up --build
 ```
+
+Если пропустить обязательную переменную окружения, приложение завершится на старте с fail-fast сообщением и названием отсутствующего `AM__...` параметра.
 
 ---
 
@@ -64,6 +69,32 @@ docker-compose exec app pytest tests/auth/
 ```sh
 docker-compose exec db psql -U postgres -d AuthManager -c "SELECT worker_id, email, is_admin, is_active FROM worker_base;"
 ```
+
+## Telegram Bot Integration
+Для MVP локально поддерживается воспроизводимый режим `polling`: отдельный bot runtime читает события из Telegram Bot API и без ручных промежуточных шагов пересылает raw updates во внутренний FastAPI endpoint `/bot/telegram/updates`.
+
+Минимальные переменные окружения для этого режима:
+
+```sh
+AM__TELEGRAM_BOT_TOKEN=...
+AM__TELEGRAM_UPDATE_MODE=polling
+AM__TELEGRAM_BACKEND_UPDATES_URL=http://127.0.0.1:8000/bot/telegram/updates
+```
+
+Локальный запуск:
+
+```sh
+poetry run uvicorn src.auth_manager.main:app --host 127.0.0.1 --port 8000
+poetry run python -m src.auth_manager.bot
+```
+
+Проверка сценария из `TASK-008`:
+
+```sh
+poetry run pytest tests/bot/test_runtime.py
+```
+
+Тесты поднимают FastAPI app, эмулируют Telegram `getUpdates` и проверяют, что команда и документ доходят до backend, фиксируются в event log и обрабатываются без ошибки.
 
 ---
 

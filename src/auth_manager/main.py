@@ -1,11 +1,5 @@
-from src.auth_manager.components.register_modules import register_modules
-from src.auth_manager.di import DependencyInjector
+from src.auth_manager.bootstrap import create_container
 
 
-register_modules(
-    package_name="src",
-    container=DependencyInjector,
-)
-container = DependencyInjector()
-container.wire(packages=["src"])
+container = create_container()
 app = container.fast_api_app().app

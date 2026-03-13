@@ -71,4 +71,4 @@ async def prepare_database_for_test(container):
 
 @pytest_asyncio.fixture(scope="function")
 async def redis_client(container):
-    return await container.async_redis_client().client
+    return container.async_redis_client().client

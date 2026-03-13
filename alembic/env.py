@@ -8,8 +8,8 @@ from alembic import context
 
 
 from src.auth_manager.config import Settings
+from src.auth_manager.models import *  # noqa: F401,F403
 from src.auth_manager.models.base import Base
-from src.auth_manager.models.user import Users
 
 config = context.config
 

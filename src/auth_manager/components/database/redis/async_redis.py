@@ -1,8 +1,10 @@
 from redis import asyncio as aioredis
 from dependency_injector.wiring import Provide
+
 from src.auth_manager.components.injectable import injectable
 from src.auth_manager.components.mixins.logger import LoggerMixin
 from src.auth_manager.config import RedisSettings
+
 
 @injectable()
 class AsyncRedisClient(LoggerMixin):
@@ -29,6 +31,12 @@ class AsyncRedisClient(LoggerMixin):
 
     async def delete(self, key: str):
         return await self._client.delete(key)
+
+    async def ping(self) -> bool:
+        return bool(await self._client.ping())
+
+    async def close(self) -> None:
+        await self._client.aclose()
 
     @property
     def client(self) -> aioredis.Redis:

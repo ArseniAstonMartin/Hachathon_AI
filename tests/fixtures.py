@@ -41,7 +41,16 @@ async def _prepare_user_fixture(container, redis_client, user_id, email, role, i
 
     token = jwt.encode(payload, private_key, algorithm=algorithm)
 
+    await session.execute(
+        text("DELETE FROM worker_base WHERE worker_id = :worker_id OR email = :email"),
+        {"worker_id": user_id, "email": email},
+    )
+    await session.commit()
+
+    await redis_client.delete(str(user_id))
+    await redis_client.delete(f"auth_session:{user_id}")
     await redis_client.set(str(user_id), token, ex=600)
+    await redis_client.set(f"auth_session:{user_id}", "active", ex=600)
     user_data['access_token'] = token
     user_data['refresh_token'] = token
 
@@ -60,6 +69,8 @@ async def user_regular(container, redis_client):
         container, redis_client, 1, "user@example.com", "user", False, False
     )
     yield user_data
+    await redis_client.delete("1")
+    await redis_client.delete("auth_session:1")
     await session.execute(text("DELETE FROM worker_base WHERE worker_id = 1"))
     await session.commit()
     await session.close()
@@ -71,6 +82,8 @@ async def user_admin(container, redis_client):
         container, redis_client, 2, "admin@example.com", "admin", True, True
     )
     yield user_data
+    await redis_client.delete("2")
+    await redis_client.delete("auth_session:2")
     await session.execute(text("DELETE FROM worker_base WHERE worker_id = 2"))
     await session.commit()
     await session.close()
